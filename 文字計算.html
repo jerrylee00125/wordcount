@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>文字計算工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px 20px;
+      max-width: 1100px;
+      margin: auto;
+      color: #333;
+    }
+
+    h2 {
+      font-size: 36px;
+      text-align: center;
+      color: #444;
+      margin-bottom: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      font-size: 18px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      resize: vertical;
+      background-color: #fff;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 6px;
+      background-color: #1976d2;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #145ca3;
+    }
+
+    .result-container {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    #result {
+      flex: 1 1 300px;
+      font-size: 20px;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      white-space: pre-line;
+    }
+
+    .total-count {
+      color: #d32f2f;
+      font-weight: bold;
+      font-size: 22px;
+    }
+
+    #chartContainer {
+      flex: 1 1 300px;
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    canvas {
+      max-width: 100%;
+	}
+		#copyTooltip {
+	  position: fixed;
+	  top: 20px;
+	  right: 20px;
+	  background-color: #4caf50;
+	  color: white;
+	  padding: 10px 16px;
+	  border-radius: 8px;
+	  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+	  opacity: 0;
+	  pointer-events: none;
+	  transition: opacity 0.4s ease;
+	  z-index: 1000;
+	}
+	#copyTooltip.show {
+	  opacity: 1;
+	}
+
+  </style>
+</head>
+<body>
+
+  <h2>文字計算工具</h2>
+
+  <textarea id="textInput" placeholder="請輸入文字..."></textarea><br>
+  <button onclick="clearText()">清除文字</button>
+  <button onclick="copyText()">複製文字</button>
+  <div id="copyTooltip">已複製！</div>
+  
+  <div class="result-container">
+    <div id="result"></div>
+    <div id="chartContainer">
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let pieChart;
+
+    function analyzeText() {
+      const text = document.getElementById("textInput").value;
+
+      const totalChars = text.trim().length;
+      const numDigits = (text.match(/\d/g) || []).length;
+      const numChinese = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+      const numEnglish = (text.match(/[A-Za-z]/g) || []).length;
+      const numPunctuation = (text.match(/[^\w\s\u4e00-\u9fff]/g) || []).length;
+
+      const result =
+        `<span class="total-count">文字總數：${totalChars}</span>\n` +
+        `數字數：${numDigits}\n` +
+        `中文字數：${numChinese}\n` +
+        `英文字數：${numEnglish}\n` +
+        `標點符號數：${numPunctuation}`;
+
+      document.getElementById("result").innerHTML = result.replace(/\n/g, "<br>");
+
+      // 更新圖表
+      updateChart([numDigits, numChinese, numEnglish, numPunctuation]);
+    }
+
+    function updateChart(data) {
+      const ctx = document.getElementById('pieChart').getContext('2d');
+
+      const config = {
+        type: 'pie',
+        data: {
+          labels: ['數字', '中文字', '英文字', '標點符號'],
+          datasets: [{
+            label: '文字組成比例',
+            data: data,
+            backgroundColor: [
+              '#42a5f5',
+              '#66bb6a',
+              '#ffa726',
+              '#ef5350'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: 'bottom'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let value = context.parsed;
+                  return `${context.label}: ${value}`;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      if (pieChart) {
+        pieChart.data.datasets[0].data = data;
+        pieChart.update();
+      } else {
+        pieChart = new Chart(ctx, config);
+      }
+    }
+
+    function clearText() {
+      document.getElementById("textInput").value = "";
+      analyzeText();
+    }
+	
+	function copyText() {
+	  const text = document.getElementById("textInput").value;
+	  navigator.clipboard.writeText(text).then(() => {
+		showCopyTooltip(); // 顯示提示動畫
+	  }).catch(err => {
+		alert("複製失敗：" + err);
+	  });
+	}
+
+	function showCopyTooltip() {
+	  const tooltip = document.getElementById("copyTooltip");
+	  tooltip.classList.add("show");
+
+	  setTimeout(() => {
+		tooltip.classList.remove("show");
+	  }, 1500); // 1.5 秒後自動淡出
+	}
+
+
+    document.getElementById("textInput").addEventListener("input", analyzeText);
+    window.onload = analyzeText;
+  </script>
+
+</body>
+</html>
