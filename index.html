@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>文字計算工具</title>
-  <link rel="icon" href="calculator.png" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -127,7 +126,8 @@
 
     function analyzeText() {
       const text = document.getElementById("textInput").value;
-
+	  
+	  const numSpaces = (text.match(/[\s\u3000]/g) || []).length;
       const totalChars = text.trim().length;
       const numDigits = (text.match(/\d/g) || []).length;
       const numChinese = (text.match(/[\u4e00-\u9fff]/g) || []).length;
@@ -136,6 +136,7 @@
 
       const result =
         `<span class="total-count">文字總數：${totalChars}</span>\n` +
+		`空格數：${numSpaces}\n` +
         `數字數：${numDigits}\n` +
         `中文字數：${numChinese}\n` +
         `英文字數：${numEnglish}\n` +
@@ -144,7 +145,8 @@
       document.getElementById("result").innerHTML = result.replace(/\n/g, "<br>");
 
       // 更新圖表
-      updateChart([numDigits, numChinese, numEnglish, numPunctuation]);
+      updateChart([numDigits, numChinese, numEnglish, numPunctuation, numSpaces]);
+
     }
 
     function updateChart(data) {
@@ -153,11 +155,12 @@
       const config = {
         type: 'pie',
         data: {
-          labels: ['數字', '中文字', '英文字', '標點符號'],
+          labels: ['空格', '數字', '中文字', '英文字', '標點符號'],
           datasets: [{
             label: '文字組成比例',
             data: data,
             backgroundColor: [
+			  '#8e8e8e',
               '#42a5f5',
               '#66bb6a',
               '#ffa726',
