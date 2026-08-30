@@ -1,233 +1,722 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <link rel="icon" href="calculator.png" type="image/png">
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="calculator.png" type="image/png">
   <title>文字計算工具</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script>
   <style>
-    body {
-      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-      background-color: #f9f9f9;
-      padding: 20px 20px;
-      max-width: 1100px;
-      margin: auto;
-      color: #333;
+    :root {
+      color-scheme: light;
+      --page-bg: #f3f8f7;
+      --surface: #ffffff;
+      --surface-soft: #eaf7f4;
+      --text: #21302c;
+      --muted: #65736f;
+      --border: #dce8e5;
+      --border-strong: #a8d8cf;
+      --primary: #0f766e;
+      --primary-hover: #0b5f59;
+      --primary-soft: #dff4ef;
+      --focus: rgba(20, 184, 166, 0.3);
+      --shadow: 0 8px 24px rgba(42, 82, 73, 0.07);
     }
 
-    h2 {
-      font-size: 36px;
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--page-bg);
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    .app-shell {
+      width: min(100% - 40px, 1200px);
+      margin: 0 auto;
+      padding: 42px 0 32px;
+    }
+
+    .page-header {
+      margin-bottom: 30px;
       text-align: center;
-      color: #444;
-      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #29443e;
+      font-size: clamp(32px, 4vw, 44px);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 9px;
+      color: #334c46;
+      font-size: 17px;
+      font-weight: 650;
     }
 
     textarea {
       width: 100%;
-      height: 300px;
+      height: 340px;
+      padding: 18px;
+      border: 1px solid #c9d8d4;
+      border-radius: 14px;
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 1px 3px rgba(42, 82, 73, 0.03);
+      font: inherit;
       font-size: 18px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
+      line-height: 1.7;
       resize: vertical;
-      background-color: #fff;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    textarea::placeholder { color: #8a9793; }
+
+    textarea:focus {
+      border-color: #45a99d;
+      box-shadow: 0 0 0 4px var(--focus);
+      outline: none;
+    }
+
+    button:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
     }
 
     button {
-      margin-top: 15px;
+      min-height: 44px;
       padding: 10px 20px;
-      font-size: 18px;
-      border: none;
-      border-radius: 6px;
-      background-color: #1976d2;
-      color: white;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      font: inherit;
+      font-size: 16px;
+      font-weight: 650;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
 
-    button:hover {
-      background-color: #145ca3;
+    .copy-button {
+      color: #ffffff;
+      background: var(--primary);
     }
 
-    .result-container {
-      margin-top: 30px;
+    .copy-button:hover { background: var(--primary-hover); }
+
+    .clear-button {
+      color: #50615c;
+      background: var(--surface);
+      border-color: #cbd9d5;
+    }
+
+    .clear-button:hover {
+      color: #344a44;
+      background: #edf4f2;
+      border-color: #adbfba;
+    }
+
+    .stats-region { margin-top: 34px; }
+
+    .section-heading {
+      margin: 0 0 14px;
+      color: #334c46;
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .primary-stats,
+    .secondary-stats {
+      display: grid;
+      margin: 0;
+    }
+
+    .primary-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .secondary-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric-card {
       display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
+      min-width: 0;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      text-align: center;
     }
 
-    #result {
-      flex: 1 1 300px;
-      font-size: 20px;
-      background-color: #ffffff;
-      padding: 20px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-      white-space: pre-line;
+    .primary-stats .metric-card {
+      min-height: 132px;
+      padding: 18px 12px;
+      border-radius: 14px;
     }
 
-    .total-count {
-      color: #d32f2f;
-      font-weight: bold;
-      font-size: 22px;
+    .primary-stats .metric-card:first-child {
+      grid-column: 1 / -1;
+      background: var(--surface-soft);
+      border-color: var(--border-strong);
     }
 
-    #chartContainer {
-      flex: 1 1 300px;
-      background-color: #fff;
-      border-radius: 10px;
-      padding: 20px;
-      border: 1px solid #ddd;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    .secondary-stats .metric-card {
+      min-height: 104px;
+      padding: 15px 10px;
+      border-radius: 12px;
+      box-shadow: 0 5px 16px rgba(42, 82, 73, 0.05);
     }
 
-    canvas {
+    .metric-card dt {
+      order: 2;
       max-width: 100%;
-	}
-		#copyTooltip {
-	  position: fixed;
-	  top: 20px;
-	  right: 20px;
-	  background-color: #4caf50;
-	  color: white;
-	  padding: 10px 16px;
-	  border-radius: 8px;
-	  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-	  opacity: 0;
-	  pointer-events: none;
-	  transition: opacity 0.4s ease;
-	  z-index: 1000;
-	}
-	#copyTooltip.show {
-	  opacity: 1;
-	}
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
 
+    .metric-card dd {
+      order: 1;
+      margin: 0;
+      color: #149488;
+      font-size: 31px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .secondary-stats .metric-card dd { font-size: 25px; }
+    .secondary-section { margin-top: 26px; }
+
+    .chart-section {
+      margin-top: 32px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .chart-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .donut-wrap {
+      position: relative;
+      width: min(100%, 300px);
+      height: 300px;
+      margin: 0 auto;
+    }
+
+    #pieChart {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .chart-center {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform: translate(-50%, -50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .chart-center strong {
+      color: var(--primary);
+      font-size: 30px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .chart-center span {
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .chart-legend {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .chart-legend li {
+      display: grid;
+      grid-template-columns: 12px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      min-height: 36px;
+      color: var(--muted);
+    }
+
+    .chart-legend strong {
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .legend-swatch {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+    }
+
+    .swatch-whitespace { background: #94a3b8; }
+    .swatch-digits { background: #3b82f6; }
+    .swatch-han { background: #14b8a6; }
+    .swatch-latin { background: #f59e0b; }
+    .swatch-punctuation { background: #ef4444; }
+    .swatch-emoji { background: #a855f7; }
+    .swatch-other { background: #64748b; }
+
+    .chart-fallback {
+      margin: 18px 0 0;
+      padding: 18px;
+      border-radius: 10px;
+      color: var(--muted);
+      background: #f4f7f6;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    #copyTooltip {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 10px 16px;
+      border-radius: 9px;
+      color: #ffffff;
+      background: var(--primary);
+      box-shadow: 0 8px 22px rgba(15, 118, 110, 0.2);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    #copyTooltip.error { background: #b42318; }
+    #copyTooltip.show { opacity: 1; visibility: visible; }
+
+    footer {
+      padding: 0 20px 28px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (min-width: 600px) {
+      .primary-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .primary-stats .metric-card:first-child { grid-column: auto; }
+      .secondary-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .chart-legend { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+    }
+
+    @media (min-width: 1024px) {
+      .app-shell { padding-top: 48px; }
+      .primary-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .secondary-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .chart-section { padding: 28px 34px; }
+      .chart-layout {
+        grid-template-columns: minmax(300px, 380px) minmax(360px, 1fr);
+        gap: 48px;
+      }
+      .donut-wrap {
+        width: 320px;
+        height: 320px;
+      }
+    }
+
+    @media (max-width: 599px) {
+      .app-shell {
+        width: min(100% - 28px, 1200px);
+        padding-top: 28px;
+      }
+      .page-header { margin-bottom: 24px; }
+      textarea {
+        height: 240px;
+        min-height: 200px;
+        padding: 14px;
+        font-size: 16px;
+      }
+      .chart-section { padding: 20px 16px; }
+      .donut-wrap {
+        width: min(100%, 270px);
+        height: 270px;
+      }
+      #copyTooltip {
+        right: 14px;
+        left: 14px;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 359px) {
+      .primary-stats,
+      .secondary-stats { grid-template-columns: 1fr; }
+      .primary-stats .metric-card:first-child { grid-column: auto; }
+      .button-row { display: grid; grid-template-columns: 1fr; }
+      button { width: 100%; }
+      .chart-legend { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      textarea,
+      button,
+      #copyTooltip { transition: none; }
+    }
   </style>
 </head>
 <body>
+  <main class="app-shell">
+    <header class="page-header">
+      <h1>文字計算工具</h1>
+      <p class="subtitle">即時計算文字組成與段落資訊</p>
+    </header>
 
-  <h2>文字計算工具</h2>
+    <section class="input-section" aria-labelledby="inputLabel">
+      <label id="inputLabel" class="input-label" for="textInput">請輸入要統計的文字</label>
+      <textarea id="textInput" placeholder="請在此輸入或貼上您的文字內容…"></textarea>
+      <div class="button-row">
+        <button id="clearButton" class="clear-button" type="button">清除文字</button>
+        <button id="copyButton" class="copy-button" type="button">複製文字</button>
+      </div>
+    </section>
 
-  <textarea id="textInput" placeholder="請輸入文字..."></textarea><br>
-  <button onclick="clearText()" style="background-color: #db3030;">清除文字</button>
-  <button onclick="copyText()">複製文字</button>
-  <div id="copyTooltip">已複製！</div>
-  
-  <div class="result-container">
-    <div id="result"></div>
-    <div id="chartContainer">
-      <canvas id="pieChart"></canvas>
+    <div id="copyTooltip" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div id="result" class="stats-region" aria-live="polite" aria-atomic="false" aria-label="文字統計結果">
+      <section aria-labelledby="primaryStatsHeading">
+        <h2 id="primaryStatsHeading" class="section-heading">重點統計</h2>
+        <dl class="primary-stats">
+          <div class="metric-card">
+            <dt>總字元數（含空白）</dt>
+            <dd id="totalWithWhitespace" data-stat="totalWithWhitespace">0</dd>
+          </div>
+          <div class="metric-card">
+            <dt>總字元數（不含空白）</dt>
+            <dd id="totalWithoutWhitespace" data-stat="totalWithoutWhitespace">0</dd>
+          </div>
+          <div class="metric-card">
+            <dt>中文字數</dt>
+            <dd id="han" data-stat="han">0</dd>
+          </div>
+          <div class="metric-card">
+            <dt>英文單字數</dt>
+            <dd id="englishWords" data-stat="englishWords">0</dd>
+          </div>
+          <div class="metric-card">
+            <dt>標點符號數</dt>
+            <dd id="punctuation" data-stat="punctuation">0</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="secondary-section" aria-labelledby="secondaryStatsHeading">
+        <h2 id="secondaryStatsHeading" class="section-heading">更多統計</h2>
+        <dl class="secondary-stats">
+          <div class="metric-card"><dt>空白字元數</dt><dd id="whitespace" data-stat="whitespace">0</dd></div>
+          <div class="metric-card"><dt>數字數</dt><dd id="digits" data-stat="digits">0</dd></div>
+          <div class="metric-card"><dt>英文字母數</dt><dd id="latinLetters" data-stat="latinLetters">0</dd></div>
+          <div class="metric-card"><dt>Emoji 數</dt><dd id="emoji" data-stat="emoji">0</dd></div>
+          <div class="metric-card"><dt>其他字元數</dt><dd id="other" data-stat="other">0</dd></div>
+          <div class="metric-card"><dt>行數</dt><dd id="lines" data-stat="lines">0</dd></div>
+          <div class="metric-card"><dt>段落數</dt><dd id="paragraphs" data-stat="paragraphs">0</dd></div>
+        </dl>
+      </section>
     </div>
-  </div>
+
+    <section id="chartContainer" class="chart-section" aria-labelledby="chartHeading">
+      <h2 id="chartHeading" class="section-heading">文字組成</h2>
+      <div id="chartVisualization" class="chart-layout">
+        <div class="donut-wrap">
+          <canvas id="pieChart" role="img" aria-label="空白、數字、中文、拉丁字母、標點、Emoji 與其他字元的比例"></canvas>
+          <div class="chart-center" aria-hidden="true">
+            <strong id="chartTotal">0</strong>
+            <span>總字元</span>
+          </div>
+        </div>
+        <ul class="chart-legend" aria-label="文字組成圖例">
+          <li><i class="legend-swatch swatch-whitespace" aria-hidden="true"></i><span>空白</span><strong data-chart-stat="whitespace">0</strong></li>
+          <li><i class="legend-swatch swatch-digits" aria-hidden="true"></i><span>數字</span><strong data-chart-stat="digits">0</strong></li>
+          <li><i class="legend-swatch swatch-han" aria-hidden="true"></i><span>中文</span><strong data-chart-stat="han">0</strong></li>
+          <li><i class="legend-swatch swatch-latin" aria-hidden="true"></i><span>拉丁字母</span><strong data-chart-stat="latinLetters">0</strong></li>
+          <li><i class="legend-swatch swatch-punctuation" aria-hidden="true"></i><span>標點</span><strong data-chart-stat="punctuation">0</strong></li>
+          <li><i class="legend-swatch swatch-emoji" aria-hidden="true"></i><span>Emoji</span><strong data-chart-stat="emoji">0</strong></li>
+          <li><i class="legend-swatch swatch-other" aria-hidden="true"></i><span>其他</span><strong data-chart-stat="other">0</strong></li>
+        </ul>
+      </div>
+      <p id="chartFallback" class="chart-fallback" role="status" hidden>圖表暫時無法載入，文字統計仍可正常使用。</p>
+    </section>
+  </main>
+
+  <footer><small>© 2026 Jerry Lee.</small></footer>
 
   <script>
     let pieChart;
+    let tooltipTimer;
 
-    function analyzeText() {
-      const text = document.getElementById("textInput").value;
-	  
-	  const numSpaces = (text.match(/[\s\u3000]/g) || []).length;
-      const totalChars = text.trim().length;
-      const numDigits = (text.match(/\d/g) || []).length;
-      const numChinese = (text.match(/[\u4e00-\u9fff]/g) || []).length;
-      const numEnglish = (text.match(/[A-Za-z]/g) || []).length;
-      const numPunctuation = (text.match(/[^\w\s\u4e00-\u9fff]/g) || []).length;
-
-      const result =
-        `<span class="total-count">文字總數：${totalChars}</span>\n` +
-		`空格數：${numSpaces}\n` +
-        `數字數：${numDigits}\n` +
-        `中文字數：${numChinese}\n` +
-        `英文字數：${numEnglish}\n` +
-        `標點符號數：${numPunctuation}`;
-
-      document.getElementById("result").innerHTML = result.replace(/\n/g, "<br>");
-
-      // 更新圖表
-      updateChart([numSpaces, numDigits, numChinese, numEnglish, numPunctuation]);
-
+    function createUnicodeRegex(source) {
+      try { return new RegExp(source, "u"); }
+      catch (error) { return null; }
     }
 
-    function updateChart(data) {
-      const ctx = document.getElementById('pieChart').getContext('2d');
+    const unicodePatterns = {
+      whitespace: createUnicodeRegex("^\\p{White_Space}+$"),
+      digit: createUnicodeRegex("\\p{Decimal_Number}"),
+      han: createUnicodeRegex("\\p{Script=Han}"),
+      latin: createUnicodeRegex("\\p{Script=Latin}"),
+      punctuation: createUnicodeRegex("\\p{Punctuation}"),
+      emojiPresentation: createUnicodeRegex("\\p{Emoji_Presentation}"),
+      regionalIndicator: createUnicodeRegex("\\p{Regional_Indicator}"),
+      extendedPictographic: createUnicodeRegex("\\p{Extended_Pictographic}")
+    };
 
-      const config = {
-        type: 'pie',
-        data: {
-          labels: ['空格', '數字', '中文字', '英文字', '標點符號'],
-          datasets: [{
-            label: '文字組成比例',
-            data: data,
-            backgroundColor: [
-			  '#8e8e8e',
-              '#42a5f5',
-              '#66bb6a',
-              '#ffa726',
-              '#ef5350'
-            ],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: 'bottom'
+    const graphemeSegmenter = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+      ? new Intl.Segmenter("zh-Hant", { granularity: "grapheme" }) : null;
+    const englishWordSegmenter = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+      ? new Intl.Segmenter("en", { granularity: "word" }) : null;
+
+    function segmentGraphemes(text) {
+      return graphemeSegmenter
+        ? Array.from(graphemeSegmenter.segment(text), item => item.segment)
+        : Array.from(text);
+    }
+
+    function isWhitespace(segment) {
+      return unicodePatterns.whitespace ? unicodePatterns.whitespace.test(segment) : /^\s+$/.test(segment);
+    }
+
+    function isDigit(segment) {
+      return unicodePatterns.digit ? unicodePatterns.digit.test(segment) : /[0-9０-９]/.test(segment);
+    }
+
+    function isHan(segment) {
+      if (unicodePatterns.han) return unicodePatterns.han.test(segment);
+      return Array.from(segment).some(character => {
+        const codePoint = character.codePointAt(0);
+        return (codePoint >= 0x3400 && codePoint <= 0x4DBF)
+          || (codePoint >= 0x4E00 && codePoint <= 0x9FFF)
+          || (codePoint >= 0xF900 && codePoint <= 0xFAFF)
+          || (codePoint >= 0x20000 && codePoint <= 0x323AF);
+      });
+    }
+
+    function isLatin(segment) {
+      return unicodePatterns.latin ? unicodePatterns.latin.test(segment) : /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(segment);
+    }
+
+    function isPunctuation(segment) {
+      return unicodePatterns.punctuation
+        ? unicodePatterns.punctuation.test(segment)
+        : /[!-/:-@[-`{-~，。！？、；：「」『』（）《》〈〉＿]/.test(segment);
+    }
+
+    function isEmoji(segment) {
+      if (segment.includes("\u20E3")) return true;
+      if (unicodePatterns.emojiPresentation?.test(segment)
+        || unicodePatterns.regionalIndicator?.test(segment)) return true;
+      return segment.includes("\uFE0F")
+        && Boolean(unicodePatterns.extendedPictographic?.test(segment));
+    }
+
+    function countEnglishWords(text) {
+      if (englishWordSegmenter) {
+        return Array.from(englishWordSegmenter.segment(text))
+          .filter(item => item.isWordLike && isLatin(item.segment)).length;
+      }
+      return (text.match(/[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’][A-Za-zÀ-ÖØ-öø-ÿ]+)*/g) || []).length;
+    }
+
+    function calculateTextStats(text) {
+      const stats = {
+        totalWithWhitespace: 0, totalWithoutWhitespace: 0, whitespace: 0,
+        digits: 0, han: 0, latinLetters: 0, englishWords: 0,
+        punctuation: 0, emoji: 0, other: 0, lines: 0, paragraphs: 0
+      };
+
+      const graphemes = segmentGraphemes(text);
+      stats.totalWithWhitespace = graphemes.length;
+
+      for (const segment of graphemes) {
+        if (isWhitespace(segment)) stats.whitespace += 1;
+        else if (isEmoji(segment)) stats.emoji += 1;
+        else if (isDigit(segment)) stats.digits += 1;
+        else if (isHan(segment)) stats.han += 1;
+        else if (isLatin(segment)) stats.latinLetters += 1;
+        else if (isPunctuation(segment)) stats.punctuation += 1;
+        else stats.other += 1;
+      }
+
+      stats.totalWithoutWhitespace = stats.totalWithWhitespace - stats.whitespace;
+      stats.englishWords = countEnglishWords(text);
+
+      const normalizedText = text.replace(/\r\n?/g, "\n");
+      stats.lines = text.length === 0 ? 0 : normalizedText.split("\n").length;
+      const paragraphText = normalizedText.trim();
+      stats.paragraphs = paragraphText.length === 0
+        ? 0
+        : paragraphText.split(/\n[^\S\n]*\n+/).filter(paragraph => /\S/.test(paragraph)).length;
+
+      return stats;
+    }
+
+    function renderStats(stats) {
+      for (const [key, value] of Object.entries(stats)) {
+        document.querySelectorAll('[data-stat="' + key + '"]').forEach(target => {
+          target.textContent = value.toLocaleString("zh-TW");
+        });
+        document.querySelectorAll('[data-chart-stat="' + key + '"]').forEach(target => {
+          target.textContent = value.toLocaleString("zh-TW");
+        });
+      }
+
+      document.getElementById("chartTotal").textContent =
+        stats.totalWithWhitespace.toLocaleString("zh-TW");
+    }
+
+    function updateChart(stats) {
+      const canvas = document.getElementById("pieChart");
+      const visualization = document.getElementById("chartVisualization");
+      const fallback = document.getElementById("chartFallback");
+
+      if (typeof window.Chart !== "function") {
+        visualization.hidden = true;
+        fallback.hidden = false;
+        return;
+      }
+
+      const data = [stats.whitespace, stats.digits, stats.han, stats.latinLetters,
+        stats.punctuation, stats.emoji, stats.other];
+
+      visualization.hidden = false;
+      fallback.hidden = true;
+
+      try {
+        if (pieChart) {
+          pieChart.data.datasets[0].data = data;
+          pieChart.update();
+          return;
+        }
+
+        pieChart = new window.Chart(canvas.getContext("2d"), {
+          type: "doughnut",
+          data: {
+            labels: ["空白", "數字", "中文", "拉丁字母", "標點", "Emoji", "其他"],
+            datasets: [{
+              label: "文字組成比例",
+              data,
+              backgroundColor: ["#94a3b8", "#3b82f6", "#14b8a6", "#f59e0b", "#ef4444", "#a855f7", "#64748b"],
+              borderColor: "#ffffff",
+              borderWidth: 2,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "68%",
+            animation: {
+              duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250
             },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  let value = context.parsed;
-                  return `${context.label}: ${value}`;
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label(context) {
+                    return context.label + ": " + context.parsed;
+                  }
                 }
               }
             }
           }
-        }
-      };
-
-      if (pieChart) {
-        pieChart.data.datasets[0].data = data;
-        pieChart.update();
-      } else {
-        pieChart = new Chart(ctx, config);
+        });
+      } catch (error) {
+        visualization.hidden = true;
+        fallback.hidden = false;
+        console.warn("圖表載入失敗，已保留文字統計功能。", error);
       }
     }
 
-    function clearText() {
-      document.getElementById("textInput").value = "";
-      analyzeText();
+    function analyzeText() {
+      const stats = calculateTextStats(document.getElementById("textInput").value);
+      renderStats(stats);
+      updateChart(stats);
     }
-	
-	function copyText() {
-	  const text = document.getElementById("textInput").value;
-	  navigator.clipboard.writeText(text).then(() => {
-		showCopyTooltip(); // 顯示提示動畫
-	  }).catch(err => {
-		alert("複製失敗：" + err);
-	  });
-	}
 
-	function showCopyTooltip() {
-	  const tooltip = document.getElementById("copyTooltip");
-	  tooltip.classList.add("show");
+    function clearText() {
+      const textInput = document.getElementById("textInput");
+      textInput.value = "";
+      analyzeText();
+      textInput.focus();
+    }
 
-	  setTimeout(() => {
-		tooltip.classList.remove("show");
-	  }, 1500); // 1.5 秒後自動淡出
-	}
+    async function copyText() {
+      const textInput = document.getElementById("textInput");
+      try {
+        if (navigator.clipboard?.writeText && window.isSecureContext) {
+          await navigator.clipboard.writeText(textInput.value);
+        } else {
+          const selectionStart = textInput.selectionStart;
+          const selectionEnd = textInput.selectionEnd;
+          textInput.select();
+          if (!document.execCommand("copy")) throw new Error("瀏覽器不支援自動複製");
+          textInput.setSelectionRange(selectionStart, selectionEnd);
+        }
+        showCopyTooltip("已複製！");
+      } catch (error) {
+        showCopyTooltip("複製失敗，請手動複製。", true);
+      }
+    }
 
+    function showCopyTooltip(message, isError = false) {
+      const tooltip = document.getElementById("copyTooltip");
+      clearTimeout(tooltipTimer);
+      tooltip.textContent = message;
+      tooltip.classList.toggle("error", isError);
+      tooltip.classList.add("show");
+      tooltipTimer = setTimeout(() => tooltip.classList.remove("show"), 1500);
+    }
 
-    document.getElementById("textInput").addEventListener("input", analyzeText);
-    window.onload = analyzeText;
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("textInput").addEventListener("input", analyzeText);
+      document.getElementById("clearButton").addEventListener("click", clearText);
+      document.getElementById("copyButton").addEventListener("click", copyText);
+      analyzeText();
+    });
   </script>
-
 </body>
-<footer>
-	<h4 style="text-align:center">© 2025 Jerry Lee.</h4>
-</footer>
 </html>
 
 
