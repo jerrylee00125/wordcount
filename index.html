@@ -3,8 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta id="themeColor" name="theme-color" content="#f3f8f7">
   <link rel="icon" href="calculator.png" type="image/png">
   <title>文字計算工具</title>
+  <script>
+    (() => {
+      const themeKey = "wordcount-theme";
+      let savedTheme = null;
+
+      try {
+        const storedValue = localStorage.getItem(themeKey);
+        if (storedValue === "light" || storedValue === "dark") savedTheme = storedValue;
+      } catch (error) {
+        // localStorage 無法使用時，仍可依系統設定顯示主題。
+      }
+
+      const theme = savedTheme
+        || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+      document.getElementById("themeColor").content = theme === "dark" ? "#03130F" : "#f3f8f7";
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script>
   <style>
     :root {
@@ -21,6 +42,62 @@
       --primary-soft: #dff4ef;
       --focus: rgba(20, 184, 166, 0.3);
       --shadow: 0 8px 24px rgba(42, 82, 73, 0.07);
+      --shadow-small: 0 5px 16px rgba(42, 82, 73, 0.05);
+      --heading: #29443e;
+      --label: #334c46;
+      --input-border: #c9d8d4;
+      --input-shadow: rgba(42, 82, 73, 0.03);
+      --input-placeholder: #8a9793;
+      --input-focus: #45a99d;
+      --on-primary: #ffffff;
+      --primary-button: #0f766e;
+      --primary-button-hover: #0b5f59;
+      --secondary-button-text: #50615c;
+      --secondary-button-border: #cbd9d5;
+      --secondary-button-hover-text: #344a44;
+      --secondary-button-hover-bg: #edf4f2;
+      --secondary-button-hover-border: #adbfba;
+      --metric-value: #149488;
+      --surface-subtle: #f4f7f6;
+      --chart-border: #ffffff;
+      --tooltip-shadow: 0 8px 22px rgba(15, 118, 110, 0.2);
+      --danger: #b42318;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page-bg: #03130F;
+      --surface: #08251D;
+      --surface-soft: #0D3026;
+      --text: #E9F5F1;
+      --muted: #A8BDB6;
+      --border: #1F493B;
+      --border-strong: #326453;
+      --primary: #53C7AE;
+      --primary-hover: #65D2BB;
+      --primary-soft: #0D3026;
+      --focus: rgba(83, 199, 174, 0.38);
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+      --shadow-small: 0 5px 16px rgba(0, 0, 0, 0.26);
+      --heading: #E9F5F1;
+      --label: #D2E5DF;
+      --input-border: #31594A;
+      --input-shadow: rgba(0, 0, 0, 0.16);
+      --input-placeholder: #829B92;
+      --input-focus: #53C7AE;
+      --on-primary: #ffffff;
+      --primary-button: #0F6859;
+      --primary-button-hover: #0B554A;
+      --secondary-button-text: #D7E9E3;
+      --secondary-button-border: #31594A;
+      --secondary-button-hover-text: #F0FAF6;
+      --secondary-button-hover-bg: #10352A;
+      --secondary-button-hover-border: #41705E;
+      --metric-value: #53C7AE;
+      --surface-subtle: #0A2A21;
+      --chart-border: #08251D;
+      --tooltip-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+      --danger: #B42318;
     }
 
     * { box-sizing: border-box; }
@@ -30,6 +107,7 @@
       color: var(--text);
       background: var(--page-bg);
       font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      transition: color 0.2s ease, background-color 0.2s ease;
     }
 
     .app-shell {
@@ -39,13 +117,20 @@
     }
 
     .page-header {
+      position: relative;
       margin-bottom: 30px;
       text-align: center;
     }
 
+    .header-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 12px;
+    }
+
     h1 {
       margin: 0;
-      color: #29443e;
+      color: var(--heading);
       font-size: clamp(32px, 4vw, 44px);
       font-weight: 700;
       letter-spacing: 0.04em;
@@ -60,7 +145,7 @@
     .input-label {
       display: block;
       margin-bottom: 9px;
-      color: #334c46;
+      color: var(--label);
       font-size: 17px;
       font-weight: 650;
     }
@@ -69,22 +154,22 @@
       width: 100%;
       height: 340px;
       padding: 18px;
-      border: 1px solid #c9d8d4;
+      border: 1px solid var(--input-border);
       border-radius: 14px;
       color: var(--text);
       background: var(--surface);
-      box-shadow: 0 1px 3px rgba(42, 82, 73, 0.03);
+      box-shadow: 0 1px 3px var(--input-shadow);
       font: inherit;
       font-size: 18px;
       line-height: 1.7;
       resize: vertical;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
-    textarea::placeholder { color: #8a9793; }
+    textarea::placeholder { color: var(--input-placeholder); }
 
     textarea:focus {
-      border-color: #45a99d;
+      border-color: var(--input-focus);
       box-shadow: 0 0 0 4px var(--focus);
       outline: none;
     }
@@ -114,30 +199,68 @@
       transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
 
-    .copy-button {
-      color: #ffffff;
-      background: var(--primary);
+    .theme-toggle {
+      display: inline-flex;
+      width: auto;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-color: var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: var(--shadow-small);
+      font-size: 14px;
+      white-space: nowrap;
     }
 
-    .copy-button:hover { background: var(--primary-hover); }
+    .theme-toggle:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-soft);
+    }
+
+    .theme-icon {
+      display: inline-flex;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+    }
+
+    .theme-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .theme-icon-sun { display: none; }
+    :root[data-theme="dark"] .theme-icon-moon { display: none; }
+    :root[data-theme="dark"] .theme-icon-sun { display: inline-flex; }
+
+    .copy-button {
+      color: var(--on-primary);
+      background: var(--primary-button);
+    }
+
+    .copy-button:hover { background: var(--primary-button-hover); }
 
     .clear-button {
-      color: #50615c;
+      color: var(--secondary-button-text);
       background: var(--surface);
-      border-color: #cbd9d5;
+      border-color: var(--secondary-button-border);
     }
 
     .clear-button:hover {
-      color: #344a44;
-      background: #edf4f2;
-      border-color: #adbfba;
+      color: var(--secondary-button-hover-text);
+      background: var(--secondary-button-hover-bg);
+      border-color: var(--secondary-button-hover-border);
     }
 
     .stats-region { margin-top: 34px; }
 
     .section-heading {
       margin: 0 0 14px;
-      color: #334c46;
+      color: var(--label);
       font-size: 19px;
       font-weight: 700;
     }
@@ -168,6 +291,7 @@
       background: var(--surface);
       box-shadow: var(--shadow);
       text-align: center;
+      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .primary-stats .metric-card {
@@ -186,7 +310,7 @@
       min-height: 104px;
       padding: 15px 10px;
       border-radius: 12px;
-      box-shadow: 0 5px 16px rgba(42, 82, 73, 0.05);
+      box-shadow: var(--shadow-small);
     }
 
     .metric-card dt {
@@ -202,7 +326,7 @@
     .metric-card dd {
       order: 1;
       margin: 0;
-      color: #149488;
+      color: var(--metric-value);
       font-size: 31px;
       font-weight: 750;
       font-variant-numeric: tabular-nums;
@@ -219,6 +343,7 @@
       border-radius: 16px;
       background: var(--surface);
       box-shadow: var(--shadow);
+      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .chart-layout {
@@ -306,7 +431,7 @@
       padding: 18px;
       border-radius: 10px;
       color: var(--muted);
-      background: #f4f7f6;
+      background: var(--surface-subtle);
       line-height: 1.6;
       text-align: center;
     }
@@ -318,16 +443,16 @@
       z-index: 1000;
       padding: 10px 16px;
       border-radius: 9px;
-      color: #ffffff;
-      background: var(--primary);
-      box-shadow: 0 8px 22px rgba(15, 118, 110, 0.2);
+      color: var(--on-primary);
+      background: var(--primary-button);
+      box-shadow: var(--tooltip-shadow);
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
       transition: opacity 0.3s ease, visibility 0.3s ease;
     }
 
-    #copyTooltip.error { background: #b42318; }
+    #copyTooltip.error { background: var(--danger); }
     #copyTooltip.show { opacity: 1; visibility: visible; }
 
     footer {
@@ -336,7 +461,20 @@
       text-align: center;
     }
 
+    footer a {
+      color: var(--primary);
+      text-underline-offset: 3px;
+    }
+
+    footer a:hover { color: var(--primary-hover); }
+
     @media (min-width: 600px) {
+      .header-actions {
+        position: absolute;
+        top: 0;
+        right: 0;
+        margin-bottom: 0;
+      }
       .primary-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .primary-stats .metric-card:first-child { grid-column: auto; }
       .secondary-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -392,8 +530,11 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+      body,
       textarea,
       button,
+      .metric-card,
+      .chart-section,
       #copyTooltip { transition: none; }
     }
   </style>
@@ -401,6 +542,22 @@
 <body>
   <main class="app-shell">
     <header class="page-header">
+      <div class="header-actions">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="目前為淺色模式；切換為深色模式">
+          <span class="theme-icon theme-icon-moon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </span>
+          <span class="theme-icon theme-icon-sun" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path>
+            </svg>
+          </span>
+          <span id="themeToggleText">深色模式</span>
+        </button>
+      </div>
       <h1>文字計算工具</h1>
       <p class="subtitle">即時計算文字組成與段落資訊</p>
     </header>
@@ -484,8 +641,71 @@
   <footer><small>© 2026 Jerry Lee. | <a href="https://github.com/jerrylee00125/wordcount">Wordcount</a></small></footer>
 
   <script>
+    const THEME_STORAGE_KEY = "wordcount-theme";
+    const themeMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     let pieChart;
     let tooltipTimer;
+    let hasManualTheme = false;
+
+    function readStoredTheme() {
+      try {
+        const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        return storedTheme === "light" || storedTheme === "dark" ? storedTheme : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function getThemeColor(variableName) {
+      return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+    }
+
+    function updateThemeToggle(theme) {
+      const toggle = document.getElementById("themeToggle");
+      const label = document.getElementById("themeToggleText");
+      if (!toggle || !label) return;
+
+      const isDark = theme === "dark";
+      const actionText = isDark ? "淺色模式" : "深色模式";
+      toggle.setAttribute("aria-label", isDark
+        ? "目前為深色模式；切換為淺色模式"
+        : "目前為淺色模式；切換為深色模式");
+      toggle.title = "切換為" + actionText;
+      label.textContent = actionText;
+    }
+
+    function refreshChartTheme() {
+      if (!pieChart) return;
+      pieChart.data.datasets[0].borderColor = getThemeColor("--chart-border");
+      pieChart.update("none");
+    }
+
+    function applyTheme(theme, persist = false) {
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+      document.getElementById("themeColor").content = theme === "dark" ? "#03130F" : "#f3f8f7";
+
+      if (persist) {
+        hasManualTheme = true;
+        try { localStorage.setItem(THEME_STORAGE_KEY, theme); }
+        catch (error) {
+          // 儲存遭封鎖時，主題仍會在目前頁面維持可用。
+        }
+      }
+
+      updateThemeToggle(theme);
+      refreshChartTheme();
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      applyTheme(currentTheme === "dark" ? "light" : "dark", true);
+    }
+
+    function handleSystemThemeChange(event) {
+      if (hasManualTheme || readStoredTheme()) return;
+      applyTheme(event.matches ? "dark" : "light");
+    }
 
     function createUnicodeRegex(source) {
       try { return new RegExp(source, "u"); }
@@ -638,7 +858,7 @@
               label: "文字組成比例",
               data,
               backgroundColor: ["#94a3b8", "#3b82f6", "#14b8a6", "#f59e0b", "#ef4444", "#a855f7", "#64748b"],
-              borderColor: "#ffffff",
+              borderColor: getThemeColor("--chart-border"),
               borderWidth: 2,
               hoverOffset: 4
             }]
@@ -710,6 +930,17 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+      const storedTheme = readStoredTheme();
+      hasManualTheme = Boolean(storedTheme);
+      applyTheme(storedTheme || (themeMediaQuery.matches ? "dark" : "light"));
+
+      document.getElementById("themeToggle").addEventListener("click", toggleTheme);
+      if (typeof themeMediaQuery.addEventListener === "function") {
+        themeMediaQuery.addEventListener("change", handleSystemThemeChange);
+      } else if (typeof themeMediaQuery.addListener === "function") {
+        themeMediaQuery.addListener(handleSystemThemeChange);
+      }
+
       document.getElementById("textInput").addEventListener("input", analyzeText);
       document.getElementById("clearButton").addEventListener("click", clearText);
       document.getElementById("copyButton").addEventListener("click", copyText);
