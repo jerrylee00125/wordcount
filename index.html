@@ -609,6 +609,7 @@
           <div class="metric-card"><dt>Emoji 數</dt><dd id="emoji" data-stat="emoji">0</dd></div>
           <div class="metric-card"><dt>其他字元數</dt><dd id="other" data-stat="other">0</dd></div>
           <div class="metric-card"><dt>行數</dt><dd id="lines" data-stat="lines">0</dd></div>
+          <div class="metric-card"><dt>句子數</dt><dd id="sentences" data-stat="sentences">0</dd></div>
           <div class="metric-card"><dt>段落數</dt><dd id="paragraphs" data-stat="paragraphs">0</dd></div>
         </dl>
       </section>
@@ -727,6 +728,8 @@
       ? new Intl.Segmenter("zh-Hant", { granularity: "grapheme" }) : null;
     const englishWordSegmenter = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
       ? new Intl.Segmenter("en", { granularity: "word" }) : null;
+    const sentenceSegmenter = typeof Intl !== "undefined" && typeof Intl.Segmenter === "function"
+      ? new Intl.Segmenter("zh-Hant", { granularity: "sentence" }) : null;
 
     function segmentGraphemes(text) {
       return graphemeSegmenter
@@ -779,11 +782,33 @@
       return (text.match(/[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’][A-Za-zÀ-ÖØ-öø-ÿ]+)*/g) || []).length;
     }
 
+    function countSentences(text) {
+      const normalizedText = text.replace(/\r\n?/g, "\n").trim();
+      if (normalizedText.length === 0) return 0;
+
+      const paragraphs = normalizedText
+        .split(/\n[^\S\n]*\n+/)
+        .filter(paragraph => /\S/.test(paragraph));
+
+      return paragraphs.reduce((total, paragraph) => {
+        const paragraphText = paragraph.replace(/\n+/g, " ").trim();
+        if (sentenceSegmenter) {
+          return total + Array.from(sentenceSegmenter.segment(paragraphText))
+            .filter(item => /\S/.test(item.segment)).length;
+        }
+
+        const sentenceParts = paragraphText.match(/[^。！？.!?]+(?:[。！？.!?]+|$)|[。！？.!?]+/g);
+        return total + (sentenceParts
+          ? sentenceParts.filter(part => /\S/.test(part)).length
+          : 1);
+      }, 0);
+    }
+
     function calculateTextStats(text) {
       const stats = {
         totalWithWhitespace: 0, totalWithoutWhitespace: 0, whitespace: 0,
         digits: 0, han: 0, latinLetters: 0, englishWords: 0,
-        punctuation: 0, emoji: 0, other: 0, lines: 0, paragraphs: 0
+        punctuation: 0, emoji: 0, other: 0, lines: 0, sentences: 0, paragraphs: 0
       };
 
       const graphemes = segmentGraphemes(text);
@@ -804,6 +829,7 @@
 
       const normalizedText = text.replace(/\r\n?/g, "\n");
       stats.lines = text.length === 0 ? 0 : normalizedText.split("\n").length;
+      stats.sentences = countSentences(text);
       const paragraphText = normalizedText.trim();
       stats.paragraphs = paragraphText.length === 0
         ? 0
